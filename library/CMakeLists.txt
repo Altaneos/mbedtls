@@ -226,7 +226,8 @@ foreach(target IN LISTS target_libraries)
         PUBLIC ${MBEDTLS_DIR}/include/
         PUBLIC ${thirdparty_inc_public}
         PRIVATE ${MBEDTLS_DIR}/library/
-        PRIVATE ${thirdparty_inc})
+        PRIVATE ${thirdparty_inc}
+        PRIVATE ${PROJECT_DIR}/components/se050/)
     target_compile_definitions(${target}
         PRIVATE ${thirdparty_def})
     install(TARGETS ${target}

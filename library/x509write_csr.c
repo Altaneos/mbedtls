@@ -52,6 +52,10 @@
 #define mbedtls_free      free
 #endif
 
+#ifdef CONFIG_ESP_TLS_USE_SE050
+#include "se050.h"
+#endif
+
 void mbedtls_x509write_csr_init( mbedtls_x509write_csr *ctx )
 {
     memset( ctx, 0, sizeof( mbedtls_x509write_csr ) );
@@ -217,6 +221,7 @@ static int x509write_csr_der_internal( mbedtls_x509write_csr *ctx,
      * Sign the written CSR data into the sig buffer
      * Note: hash errors can happen only after an internal error
      */
+#ifndef CONFIG_ESP_TLS_USE_SE050
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     if( psa_hash_setup( &hash_operation, hash_alg ) != PSA_SUCCESS )
         return( MBEDTLS_ERR_X509_FATAL_ERROR );
@@ -233,13 +238,18 @@ static int x509write_csr_der_internal( mbedtls_x509write_csr *ctx,
     ret = mbedtls_md( mbedtls_md_info_from_type( ctx->md_alg ), c, len, hash );
     if( ret != 0 )
         return( ret );
-#endif
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
+
     if( ( ret = mbedtls_pk_sign( ctx->key, ctx->md_alg, hash, 0, sig, &sig_len,
                                  f_rng, p_rng ) ) != 0 )
     {
         return( ret );
     }
-
+#else // CONFIG_ESP_TLS_USE_SE050    
+    ret = SE050_DigestAndSign(c, len, hash, sizeof(hash), sig, &sig_len);
+    if( ret != 0 )
+        return( ret );
+#endif // CONFIG_ESP_TLS_USE_SE050
     if( mbedtls_pk_can_do( ctx->key, MBEDTLS_PK_RSA ) )
         pk_alg = MBEDTLS_PK_RSA;
     else if( mbedtls_pk_can_do( ctx->key, MBEDTLS_PK_ECDSA ) )
